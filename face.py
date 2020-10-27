@@ -10,9 +10,9 @@ class Face:
         self.db = app.db
         self.faces = []
         self.face_user_keys = {}
-        self.load_all()
         self.face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
-        self.face_recognizer =cv2.face.LBPHFaceRecognizer_create()
+        self.face_recognizer = cv2.face.LBPHFaceRecognizer_create()
+        self.load_all()
 
     def load_user_by_index_key(self, index_key=0):
 
@@ -60,7 +60,8 @@ class Face:
             index_key_string = str(index_key)
             self.face_user_keys['{0}'.format(index_key_string)] = user_id 
         X,y = np.array(X),np.array(y)
-        self.face_recognizer.train(X,y)
+        if X:
+            self.face_recognizer.train(X,y)
 
     def recognize(self,unknown_filename):
         unknown_filename = cv2.imread(self.load_unknown_file_by_name(unknown_filename))

@@ -6,7 +6,7 @@ db = path.join(getcwd(),'database.db')
 class Database:
 
     def __init__(self):
-        self.connection = sqlite3.connect(db)
+        self.connection = sqlite3.connect(db, check_same_thread=False)
 
     def query(self,q,arg=()):
         cursor = self.connection.cursor()
@@ -23,7 +23,7 @@ class Database:
         cursor.execute(q,arg)
 
         self.connection.commit()
-        result = cursor.commit()
+        result = cursor.lastrowid
         cursor.close()
         return result
 

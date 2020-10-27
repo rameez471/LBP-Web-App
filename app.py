@@ -81,7 +81,7 @@ def train():
             trained_storage = path.join(app.config['storage'],'trained')
             file.save(path.join(trained_storage, filename))
 
-            created = int(time.time())d
+            created = int(time.time())
             user_id = app.db.insert('INSERT INTO users(name, created) values(?,?)',[name,created])
 
             if user_id:
