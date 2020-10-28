@@ -28,6 +28,7 @@ class Face:
 
     def load_unknown_file_by_name(self, name):
         unknown_storage = path.join(self.storage,'unknown')
+        print('What the fuck!')
         return path.join(unknown_storage, name)
 
     def load_all(self):
@@ -60,11 +61,15 @@ class Face:
             index_key_string = str(index_key)
             self.face_user_keys['{0}'.format(index_key_string)] = user_id 
         X,y = np.array(X),np.array(y)
+        print('Training...')
+        print(X,y)
         if X:
             self.face_recognizer.train(X,y)
+            print('Model Trained!!')
 
     def recognize(self,unknown_filename):
         unknown_filename = cv2.imread(self.load_unknown_file_by_name(unknown_filename))
+        unknown_filename.show()
         (x,y,w,h) = self.face_cascade.detectMultiScale(unknown_filename,1.3,4)[0]
         face_image = unknown_filename[y:y+h,x:x+w]
         (width, height) = (130, 100)
