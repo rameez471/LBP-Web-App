@@ -9,13 +9,10 @@ class Face:
         self.storage = app.config['storage']
         self.db = app.db
         self.faces = []
-        self.X = []
-        self.Y = []
         self.face_user_keys = {}
         self.face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
         self.face_recognizer = cv2.face.LBPHFaceRecognizer_create()
         self.load_all()
-        self.train()
 
     def load_user_by_index_key(self, index_key=0):
 
@@ -36,6 +33,8 @@ class Face:
     def load_all(self):
 
         results = self.db.select("SELECT faces.id, faces.user_id, faces.filename, faces.created FROM faces")
+        X = list()
+        Y = list()
 
         for row in results:
 
@@ -58,24 +57,16 @@ class Face:
             face_image = face_image[y:y+h,x:x+w]
             # face_image = cv2.resize(face_image,(width,height))
             index_key = len(self.faces)
-            self.X.append(face_image)
-            self.Y.append(user_id)
+            X.append(face_image)
+            Y.append(user_id)
             index_key_string = str(user_id)
             self.face_user_keys['{0}'.format(index_key_string)] = user_id 
-        # X,Y = np.array(X),np.array(Y)
-        # print('Training...')
-        # print(Y)
-        # if len(X):
-        #     self.face_recognizer.train(X,Y)
-        #     print('Model Trained!!')
-
-    def train(self):
+        X,Y = np.array(X),np.array(Y)
         print('Training...')
-        if len(self.X):
-            images, labels = np.array(self.X), np.array(self.Y)
-            self.face_recognizer.train(images,labels)
+        print(Y)
+        if len(X):
+            self.face_recognizer.train(X,Y)
             print('Model Trained!!')
-
 
     def recognize(self,unknown_filename):
         unknown_image = cv2.imread(self.load_unknown_file_by_name(unknown_filename))
@@ -87,8 +78,9 @@ class Face:
         
         prediction,confidence = self.face_recognizer.predict(unknown_image)
 
-        if confidence < 80:
+        if confidence < 30:
             user_id = self.load_user_by_index_key(prediction)
+            print(confidence)
             return user_id
         return None
 

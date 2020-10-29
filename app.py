@@ -97,7 +97,7 @@ def train():
                                 'filename':filename,
                                 'created':created}
                     return_output = json.dumps({'id':user_id,'name':name,'face':face_data})
-                    app.face.train()
+                    app.face.load_all()
                     return success_handle(return_output)
                 else:
                     return error_handle('Error saving face image.')
