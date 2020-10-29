@@ -132,13 +132,14 @@ def recognize():
             file.save(file_path)
 
             user_id = app.face.recognize(filename)
+            print(user_id)
             if user_id:
                 user = get_user_by_id(user_id)
                 message = {'message':'Hey we found {0} math with your face image'.format(user['name']),
                             'user':user}
                 return success_handle(json.dumps(message))
             else:
-                return error_handle('Device Unlocked')
+                return error_handle('Sorry we can not found any people matched with your face image, Device still Locked')
 
 
 app.run()
