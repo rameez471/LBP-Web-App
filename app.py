@@ -20,30 +20,28 @@ def error_handle(error_message, status=500, mimetype='application/json'):
 def get_user_by_id(user_id):
     user = {}
     results = app.db.select(
-        'SELECT users.id, users.name, users.created, faces.id, faces.filename, faces.created FROM users LEFT JOIN ON faces.user_id = users.id WHERE users.id = ?',
-        [user_id]
-    )
+        'SELECT users.id, users.name, users.created, faces.id, faces.user_id, faces.filename,faces.created FROM users LEFT JOIN faces ON faces.user_id = users.id WHERE users.id = ?',
+        [user_id])
 
     index = 0
     for row in results:
-        
+        # print(row)
         face = {
-            'id':row[3],
-            'user_id':row[4],
-            'filename':row[5],
-            'created':row[6],
+            "id": row[3],
+            "user_id": row[4],
+            "filename": row[5],
+            "created": row[6],
         }
-
         if index == 0:
             user = {
-                'id':row[0],
-                'name':row[1],
-                'created':row[2],
-                'faces':[],
+                "id": row[0],
+                "name": row[1],
+                "created": row[2],
+                "faces": [],
             }
         if row[3]:
-            user['faces'].append(face)
-        index += 1
+            user["faces"].append(face)
+        index = index + 1
 
     if 'id' in user:
         return user
@@ -51,7 +49,8 @@ def get_user_by_id(user_id):
 
 def delete_user_by_id(user_id):
     app.db.delete('DELETE FROM users WHERE users.id = ?', [user_id])
-    app.db.delete('DELETE FROM faces WHERE faces.id = ?', [user_id])
+    # also delete all faces with user id
+    app.db.delete('DELETE FROM faces WHERE faces.user_id = ?', [user_id])
 
 @app.route('/',methods=['GET'])
 def page_home():
@@ -82,11 +81,11 @@ def train():
             file.save(path.join(trained_storage, filename))
 
             created = int(time.time())
-            user_id = app.db.insert('INSERT INTO users(name, created) values(?,?)',[name,created])
+            user_id = app.db.insert('INSERT INTO users(name, created) values(?,?)', [name, created])
 
             if user_id:
-                face_id = app.db.insert('INSERT INTO faces(user_id, filename,created) values(?,?,?)'
-                                        [user_id, filename,created])
+                face_id = app.db.insert('INSERT INTO faces(user_id, filename, created) values(?,?,?)',
+                                        [user_id, filename, created])
                 
                 if face_id:
                     face_data = {'id': face_id,
@@ -130,7 +129,7 @@ def recognize():
             filename = secure_filename(file.filename)
             unknown_storage = path.join(app.config['storage'],'unknown')
             file_path = path.join(unknown_storage, filename)
-            file.save(filename)
+            file.save(file_path)
 
             user_id = app.face.recognize(filename)
             if user_id:

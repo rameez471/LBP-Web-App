@@ -3,6 +3,7 @@ from os import path,getcwd
 
 db = path.join(getcwd(),'database.db')
 
+
 class Database:
 
     def __init__(self):
@@ -10,7 +11,6 @@ class Database:
 
     def query(self,q,arg=()):
         cursor = self.connection.cursor()
-
         cursor.execute(q, arg)
         results = cursor.fetchall()
         cursor.close()

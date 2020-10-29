@@ -28,12 +28,11 @@ class Face:
 
     def load_unknown_file_by_name(self, name):
         unknown_storage = path.join(self.storage,'unknown')
-        print('What the fuck!')
         return path.join(unknown_storage, name)
 
     def load_all(self):
 
-        results = self.db.select('SELECT faces.id, faces.user_id, faces.filename, faces.created FROM faces')
+        results = self.db.select("SELECT faces.id, faces.user_id, faces.filename, faces.created FROM faces")
         X = []
         y = []
 
@@ -44,20 +43,21 @@ class Face:
             (width, height) = (130, 100)
 
             face = {
-                'id': row[0],
-                'user_id': user_id,
-                'filename': filename,
-                'created': row[3]
+                "id": row[0],
+                "user_id": user_id,
+                "filename": filename,
+                "created": row[3]
             }
+
             self.faces.append(face)
-            face_image = cv2.imread(self.load_train_file_by_name)
+            face_image = cv2.imread(self.load_train_file_by_name(filename))
             face_image = cv2.cvtColor(face_image, cv2.COLOR_BGR2GRAY)
             (x,y,w,h) = self.face_cascade.detectMultiScale(face_image,1.3,4)[0]
             face_image = face_image[y:y+h,x:x+w]
             face_image = cv2.resize(face_image,(width,height))
             index_key = len(self.face_data)
             X.append(face_image)
-            y.append(index_key)
+            y.append(user_id)
             index_key_string = str(index_key)
             self.face_user_keys['{0}'.format(index_key_string)] = user_id 
         X,y = np.array(X),np.array(y)
@@ -69,7 +69,7 @@ class Face:
 
     def recognize(self,unknown_filename):
         unknown_filename = cv2.imread(self.load_unknown_file_by_name(unknown_filename))
-        unknown_filename.show()
+        print(unknown_filename)
         (x,y,w,h) = self.face_cascade.detectMultiScale(unknown_filename,1.3,4)[0]
         face_image = unknown_filename[y:y+h,x:x+w]
         (width, height) = (130, 100)
