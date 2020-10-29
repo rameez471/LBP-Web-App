@@ -9,10 +9,13 @@ class Face:
         self.storage = app.config['storage']
         self.db = app.db
         self.faces = []
+        self.X = []
+        self.Y = []
         self.face_user_keys = {}
         self.face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
         self.face_recognizer = cv2.face.LBPHFaceRecognizer_create()
         self.load_all()
+        self.train()
 
     def load_user_by_index_key(self, index_key=0):
 
@@ -33,8 +36,6 @@ class Face:
     def load_all(self):
 
         results = self.db.select("SELECT faces.id, faces.user_id, faces.filename, faces.created FROM faces")
-        X = list()
-        Y = list()
 
         for row in results:
 
@@ -55,18 +56,26 @@ class Face:
             # print(self.face_cascade.detectMultiScale(face_image))
             (x,y,w,h) = self.face_cascade.detectMultiScale(face_image)[0]
             face_image = face_image[y:y+h,x:x+w]
-            face_image = cv2.resize(face_image,(width,height))
+            # face_image = cv2.resize(face_image,(width,height))
             index_key = len(self.faces)
-            X.append(face_image)
-            Y.append(user_id)
+            self.X.append(face_image)
+            self.Y.append(user_id)
             index_key_string = str(user_id)
             self.face_user_keys['{0}'.format(index_key_string)] = user_id 
-        X,Y = np.array(X),np.array(Y)
+        # X,Y = np.array(X),np.array(Y)
+        # print('Training...')
+        # print(Y)
+        # if len(X):
+        #     self.face_recognizer.train(X,Y)
+        #     print('Model Trained!!')
+
+    def train(self):
         print('Training...')
-        print(Y)
-        if len(X):
-            self.face_recognizer.train(X,Y)
+        if len(self.X):
+            images, labels = np.array(self.X), np.array(self.Y)
+            self.face_recognizer.train(images,labels)
             print('Model Trained!!')
+
 
     def recognize(self,unknown_filename):
         unknown_image = cv2.imread(self.load_unknown_file_by_name(unknown_filename))
@@ -74,9 +83,8 @@ class Face:
         (x,y,w,h) = self.face_cascade.detectMultiScale(unknown_image)[0]
         unknown_image = unknown_image[y:y+h,x:x+w]
         (width, height) = (130, 100)
-        print(unknown_image)
-        unknown_image = cv2.resize(unknown_image,(width,height))
-        print(unknown_image)
+        # unknown_image = cv2.resize(unknown_image,(width,height))
+        
         prediction,confidence = self.face_recognizer.predict(unknown_image)
 
         if confidence < 80:
@@ -86,29 +94,6 @@ class Face:
 
 
 
-def blockshaped(arr, nrows, ncols):
-
-	h, w = arr.shape
-	return (arr.reshape(h//nrows, nrows, -1, ncols)
-			.swapaxes(1,2)
-			.reshape(-1, nrows, ncols))
-
-# https://docs.scipy.org/doc/numpy-1.13.0/reference/generated/numpy.histogram.html
-def getHistogram(imgArray):
-	hist, bin_edges = numpy.histogram(imgArray, density=True)
-	return hist
 
 
-# Perform LBP with multiblock
-def LBP(img): 
-	lbp_value = local_binary_pattern(img, 8, 1)
-
-	# Split img into 10*10 blocks
-	shaped = blockshaped(lbp_value, 10, 13)
-
-	# Calculate the histogram for each block
-	xBlocks = []
-	for s in shaped:
-		xBlocks.append(getHistogram(s))
-
-	return numpy.concatenate(xBlocks)
+    

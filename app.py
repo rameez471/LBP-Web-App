@@ -4,6 +4,7 @@ from os import path, getcwd
 import time
 from db import Database
 from face import Face
+import sys
 
 app = Flask(__name__)
 app.config['file_allowed'] = ['image/png', 'image/jpeg','image/jpg']
@@ -79,9 +80,13 @@ def train():
             filename = secure_filename(file.filename)
             trained_storage = path.join(app.config['storage'],'trained')
             file.save(path.join(trained_storage, filename))
-
             created = int(time.time())
-            user_id = app.db.insert('INSERT INTO users(name, created) values(?,?)', [name, created])
+
+            user_id = app.db.query('SELECT users.id FROM users WHERE users.name = ?',[name])
+            if user_id:
+                user_id = user_id[0][0]
+            else:
+                user_id = app.db.insert('INSERT INTO users(name, created) values(?,?)', [name, created])
 
             if user_id:
                 face_id = app.db.insert('INSERT INTO faces(user_id, filename, created) values(?,?,?)',
@@ -92,6 +97,7 @@ def train():
                                 'filename':filename,
                                 'created':created}
                     return_output = json.dumps({'id':user_id,'name':name,'face':face_data})
+                    app.face.train()
                     return success_handle(return_output)
                 else:
                     return error_handle('Error saving face image.')
@@ -141,5 +147,21 @@ def recognize():
             else:
                 return error_handle('Sorry we can not found any people matched with your face image, Device still Locked')
 
+from imutils.video import WebcamVideoStream
+
+@app.route('/live',methods=['GET'])
+def face_detection_live():
+
+    cap = WebcamVideoStream(src=0).start()
+    while True:
+        frame = cap.read()
+        frame = cv2.resize(src=frame_orig, dsize=(0, 0), fx=0.5, fy=0.5)
+
+        frame = frame[:, :, ::-1]
+
+        cv2.imshow(winname='Video', mat=frame)
+        
+    cap.stop()  # Stop multi-threaded Video Stream
+    cv2.destroyAllWindows()
 
 app.run()
