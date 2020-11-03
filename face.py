@@ -40,7 +40,6 @@ class Face:
 
             user_id = row[1]
             filename = row[2]
-            (width, height) = (130, 100)
 
             face = {
                 "id": row[0],
@@ -51,11 +50,6 @@ class Face:
 
             self.faces.append(face)
             face_image = cv2.imread(self.load_train_file_by_name(filename))
-            face_image = cv2.cvtColor(face_image, cv2.COLOR_BGR2GRAY)
-            # print(self.face_cascade.detectMultiScale(face_image))
-            (x,y,w,h) = self.face_cascade.detectMultiScale(face_image)[0]
-            face_image = face_image[y:y+h,x:x+w]
-            # face_image = cv2.resize(face_image,(width,height))
             index_key = len(self.faces)
             X.append(face_image)
             Y.append(user_id)
@@ -68,17 +62,18 @@ class Face:
             self.face_recognizer.train(X,Y)
             print('Model Trained!!')
 
-    def recognize(self,unknown_filename):
-        unknown_image = cv2.imread(self.load_unknown_file_by_name(unknown_filename))
-        unknown_image = cv2.cvtColor(unknown_image, cv2.COLOR_BGR2GRAY)
-        (x,y,w,h) = self.face_cascade.detectMultiScale(unknown_image)[0]
-        unknown_image = unknown_image[y:y+h,x:x+w]
-        (width, height) = (130, 100)
-        # unknown_image = cv2.resize(unknown_image,(width,height))
+    def add_person(self, image):
         
-        prediction,confidence = self.face_recognizer.predict(unknown_image)
 
-        if confidence < 30:
+    def face_detect(self,image):
+        faces = self.face_cascade.detectMultiScale(image)
+        face_coor = [(x,y,w,h) for (x,y,w,h) in faces]
+        return face_coor
+
+    def recognize(self,image):
+        prediction,confidence = self.face_recognizer.predict(image)
+
+        if confidence < 80:
             user_id = self.load_user_by_index_key(prediction)
             print(confidence)
             return user_id
