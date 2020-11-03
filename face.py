@@ -11,8 +11,8 @@ class Face:
         self.faces = []
         self.face_user_keys = {}
         self.face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
-        self.face_recognizer = cv2.face.LBPHFaceRecognizer_create()
-        self.load_all()
+        # self.face_recognizer = cv2.face.LBPHFaceRecognizer_create()
+        # self.load_all()
 
     def load_user_by_index_key(self, index_key=0):
 
@@ -63,7 +63,8 @@ class Face:
             print('Model Trained!!')
 
     def add_person(self, image):
-        
+        pass
+
 
     def face_detect(self,image):
         faces = self.face_cascade.detectMultiScale(image)

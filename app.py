@@ -1,167 +1,88 @@
-from flask import Flask, json, Response, request, render_template
-from werkzeug.utils import secure_filename
-from os import path, getcwd
-import time
-from db import Database
 from face import Face
-import sys
+from imutils.video import VideoStream
+from flask import Response, Flask, render_template
+import threading
+import argparse
+import datetime
+import imutils
+import time
+import cv2
+
+outputFrame = None
+lock = threading.Lock()
 
 app = Flask(__name__)
-app.config['file_allowed'] = ['image/png', 'image/jpeg','image/jpg']
-app.config['storage'] = path.join(getcwd(),'storage')
-app.db = Database()
-app.face = Face(app)
 
-def success_handle(output, status=200, mimetype='application/json'):
-    return Response(output, status=status, mimetype=mimetype)
+vs = VideoStream(src=0).start()
+time.sleep(2.0)
 
-def error_handle(error_message, status=500, mimetype='application/json'):
-    return Response(json.dumps({'error':{'message':error_message}}), status=status, mimetype=mimetype)
-
-def get_user_by_id(user_id):
-    user = {}
-    results = app.db.select(
-        'SELECT users.id, users.name, users.created, faces.id, faces.user_id, faces.filename,faces.created FROM users LEFT JOIN faces ON faces.user_id = users.id WHERE users.id = ?',
-        [user_id])
-
-    index = 0
-    for row in results:
-        # print(row)
-        face = {
-            "id": row[3],
-            "user_id": row[4],
-            "filename": row[5],
-            "created": row[6],
-        }
-        if index == 0:
-            user = {
-                "id": row[0],
-                "name": row[1],
-                "created": row[2],
-                "faces": [],
-            }
-        if row[3]:
-            user["faces"].append(face)
-        index = index + 1
-
-    if 'id' in user:
-        return user
-    return None
-
-def delete_user_by_id(user_id):
-    app.db.delete('DELETE FROM users WHERE users.id = ?', [user_id])
-    # also delete all faces with user id
-    app.db.delete('DELETE FROM faces WHERE faces.user_id = ?', [user_id])
-
-@app.route('/',methods=['GET'])
-def page_home():
+@app.route('/')
+def index():
     return render_template('index.html')
 
-@app.route('/api',methods=['GET'])
-def homepage():
-    output = json.dumps({'api':'1.0'})
-    return success_handle(output)
 
-@app.route('/api/train', methods=['POST'])
-def train():
+def detect_face(frameCount):
+    global vs, outputFrame, lock
 
-    output = json.dumps({'success':True})
+    face = Face()
 
-    if 'file' not in request.files:
-        return error_handle('Face image is required.')
-    
-    else:
-        file = request.files['file']
-
-        if file.mimetype not in app.config['file_allowed']:
-            return error_handle('Only *.png , *.jpg and *.jpeg files allowed')
-        else:
-            name = request.form['name']
-            filename = secure_filename(file.filename)
-            trained_storage = path.join(app.config['storage'],'trained')
-            file.save(path.join(trained_storage, filename))
-            created = int(time.time())
-
-            user_id = app.db.query('SELECT users.id FROM users WHERE users.name = ?',[name])
-            if user_id:
-                user_id = user_id[0][0]
-            else:
-                user_id = app.db.insert('INSERT INTO users(name, created) values(?,?)', [name, created])
-
-            if user_id:
-                face_id = app.db.insert('INSERT INTO faces(user_id, filename, created) values(?,?,?)',
-                                        [user_id, filename, created])
-                
-                if face_id:
-                    face_data = {'id': face_id,
-                                'filename':filename,
-                                'created':created}
-                    return_output = json.dumps({'id':user_id,'name':name,'face':face_data})
-                    app.face.load_all()
-                    return success_handle(return_output)
-                else:
-                    return error_handle('Error saving face image.')
-
-            else:
-                return error_handle('An Erro occured interting new user')
-
-    return success_handle(output)
-
-@app.route('/api/users/<int:user_id>',methods=['GET','DELETE'])
-def user_profile(user_id):
-    if request.method == 'GET':
-        user = get_user_by_id(user_id)    
-        if user:
-            return success_handle(json.dumps(user),200)
-        else:
-            return error_handle('User not found',404)
-
-    if request.method == 'DELETE':
-        delete_user_by_id(user_id)
-        return success_handle(json.dumps({'deleted':True}))
-
-
-@app.route('/api/recognize',methods=['POST'])
-def recognize():
-
-    if 'file' not in request.files:
-        return error_handle('Image is required.')
-    else:
-        file = request.files['file']
-        
-        if file.mimetype not in app.config['file_allowed']:
-            return error_handle('File extension is not allowed.')
-        else:
-            filename = secure_filename(file.filename)
-            unknown_storage = path.join(app.config['storage'],'unknown')
-            file_path = path.join(unknown_storage, filename)
-            file.save(file_path)
-
-            user_id = app.face.recognize(filename)
-            print(user_id)
-            if user_id:
-                user = get_user_by_id(user_id)
-                message = {'message':'Hey we found {0} math with your face image'.format(user['name']),
-                            'user':user}
-                return success_handle(json.dumps(message))
-            else:
-                return error_handle('Sorry we can not found any people matched with your face image, Device still Locked')
-
-from imutils.video import WebcamVideoStream
-
-@app.route('/live',methods=['GET'])
-def face_detection_live():
-
-    cap = WebcamVideoStream(src=0).start()
     while True:
-        frame = cap.read()
-        frame = cv2.resize(src=frame_orig, dsize=(0, 0), fx=0.5, fy=0.5)
 
-        frame = frame[:, :, ::-1]
+        frame = vs.read()
+        frame = imutils.resize(frame,width=500)
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-        cv2.imshow(winname='Video', mat=frame)
-        
-    cap.stop()  # Stop multi-threaded Video Stream
-    cv2.destroyAllWindows()
+        timestamp = datetime.datetime.now()
+        cv2.putText(frame, timestamp.strftime(
+			"%A %d %B %Y %I:%M:%S%p"), (10, frame.shape[0] - 10),
+			cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 0, 255), 1)
 
-app.run()
+        with lock:
+            outputFrame = frame.copy()
+
+def generate():
+
+    global outputFrame, lock
+
+    while True:
+        with lock:
+            if outputFrame is None:
+                continue
+
+            (flag, encodedImage) = cv2.imencode('.jpg',outputFrame)
+
+            if not flag:
+                continue
+
+        yield(b'--frame\r\n'b'Content-Type: image/jpeg\r\n\r\n'+
+                bytearray(encodedImage) + b'\r\n')
+
+@app.route('/video_feed')
+def video_feed():
+
+    return Response(generate(),
+            mimetype='multipart/x-mixed-replace; boundary=frame')
+
+if __name__ == '__main__':
+    	# construct the argument parser and parse command line arguments
+	ap = argparse.ArgumentParser()
+	ap.add_argument("-i", "--ip", type=str, required=True,
+		help="ip address of the device")
+	ap.add_argument("-o", "--port", type=int, required=True,
+		help="ephemeral port number of the server (1024 to 65535)")
+	ap.add_argument("-f", "--frame-count", type=int, default=32,
+		help="# of frames used to construct the background model")
+	args = vars(ap.parse_args())
+
+	# start a thread that will perform motion detection
+	t = threading.Thread( args=(
+		args["frame_count"],))
+	t.daemon = True
+	t.start()
+
+	# start the flask app
+	app.run(host=args["ip"], port=args["port"], debug=True,
+		threaded=True, use_reloader=False)
+
+# release the video stream pointer
+vs.stop()
