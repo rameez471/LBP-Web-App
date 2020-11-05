@@ -30,11 +30,10 @@ def detect_face():
     while True:
 
         frame = vs.read()
-        frame = imutils.resize(frame,width=500)
+        frame = imutils.resize(frame,width=800)
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
         faces = face.detect_face(gray)
-        print(faces)
 
         timestamp = datetime.datetime.now()
         cv2.putText(frame, timestamp.strftime(
@@ -44,6 +43,15 @@ def detect_face():
         if faces is not None:
             for (x,y,w,h) in faces:
                 cv2.rectangle(frame,(x,y),(x+w,y+h),(255,0,0),2)
+
+                image = gray[y:y+h, x:x+w]
+
+                prediction = face.recognize(image)
+
+                if prediction is not None:
+                    cv2.putText(frame,'%s - %.0f' % (prediction),(x-10, y-10), cv2.FONT_HERSHEY_PLAIN,1,(0, 255, 0))
+                else:
+                    cv2.putText(frame,'not recognized',(x-10, y-10), cv2.FONT_HERSHEY_PLAIN,1,(0, 255, 0))
 
         with lock:
             outputFrame = frame.copy()
