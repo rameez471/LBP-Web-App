@@ -1,4 +1,4 @@
-from face import Face
+from face import FaceObject
 from imutils.video import VideoStream
 from flask import Response, Flask, render_template
 import threading
@@ -21,10 +21,11 @@ def index():
     return render_template('index.html')
 
 
-def detect_face(frameCount):
+def detect_face():
     global vs, outputFrame, lock
 
-    face = Face()
+    face = FaceObject()
+    total = 0
 
     while True:
 
@@ -32,13 +33,21 @@ def detect_face(frameCount):
         frame = imutils.resize(frame,width=500)
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
+        faces = face.detect_face(gray)
+        print(faces)
+
         timestamp = datetime.datetime.now()
         cv2.putText(frame, timestamp.strftime(
 			"%A %d %B %Y %I:%M:%S%p"), (10, frame.shape[0] - 10),
 			cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 0, 255), 1)
 
+        if faces is not None:
+            for (x,y,w,h) in faces:
+                cv2.rectangle(frame,(x,y),(x+w,y+h),(255,0,0),2)
+
         with lock:
             outputFrame = frame.copy()
+
 
 def generate():
 
@@ -59,7 +68,7 @@ def generate():
 
 @app.route('/video_feed')
 def video_feed():
-
+    print('WTF')
     return Response(generate(),
             mimetype='multipart/x-mixed-replace; boundary=frame')
 
@@ -70,13 +79,10 @@ if __name__ == '__main__':
 		help="ip address of the device")
 	ap.add_argument("-o", "--port", type=int, required=True,
 		help="ephemeral port number of the server (1024 to 65535)")
-	ap.add_argument("-f", "--frame-count", type=int, default=32,
-		help="# of frames used to construct the background model")
 	args = vars(ap.parse_args())
 
 	# start a thread that will perform motion detection
-	t = threading.Thread( args=(
-		args["frame_count"],))
+	t = threading.Thread(target=detect_face)
 	t.daemon = True
 	t.start()
 
