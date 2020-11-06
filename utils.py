@@ -2,6 +2,7 @@ import numpy as np
 import imutils
 import cv2
 import os
+from flask import flash
 
 class FaceObject:
 
@@ -47,4 +48,22 @@ class FaceObject:
         
         return None
 
+def allowed_file(filename, allowed_set):
+
+    check = '.' in filename and filename.rsplit('.',1)[1].lower() in allowed_set
+
+    return check
+
+def remove_file_extension(filename):
+    filename = os.path.splitext(filename)[0]
+
+    return filename
+
+def save_image(img, filename, uploads_path):
+    try:
+        cv2.imwrite(os.path.join(uploads_path, filename), img)
+        flash('Image saved')
+    except Exception as e:
+        print(str(e))
+        return str(e)
     
