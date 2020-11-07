@@ -17,8 +17,9 @@ lock = threading.Lock()
 app = Flask(__name__)
 
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
-uploads_path = os.path.join(APP_ROOT, 'uploads')
+uploads_path = os.path.join(APP_ROOT, 'datasets')
 allowed_set = set(['png', 'jpg', 'jpeg'])
+app.secret_key = os.urandom(24)
 
 vs = WebcamVideoStream(src=0).start()
 time.sleep(2.0)
@@ -170,8 +171,9 @@ def detect_and_add():
     global outputFrame,vs, lock
 
     count = 0
+    image_array = list()
 
-    while count<100:
+    while count<30:
 
         frame = vs.read()
         frame = imutils.resize(frame)
@@ -188,17 +190,50 @@ def detect_and_add():
             for (x,y,w,h) in faces:
 
                 image = gray[y:y+h, x:x+w]
-                
+                image_array.append((image,count))
 
-
+        count+=1
 
         outputFrame = frame.copy()
 
+    return image_array
 
 
-@app.route('/add_image')
+
+@app.route('/add_image',methods=['GET', 'POST'])
 def add_image():
-    pass
+    images = detect_and_add()
+
+    import matplotlib.pyplot as plt
+
+    if request.method == 'POST':
+        name = request.form['name']
+        
+        if name is  None:
+            return render_template(
+                template_name_or_list='warning.html',
+                status='Enter Your Name'
+            )
+
+        for i in images:
+            img = i[0]
+            filename = name + str(i[1]) +'.jpg'
+            filename = secure_filename(filename=filename)
+            path = os.path.join(uploads_path,name)  
+
+            save_image(img, filename, path)          
+
+
+        return render_template(
+            template_name_or_list='upload_result.html',
+            status='Person is added successfully!!'
+        )
+
+    else:
+        return render_template(
+            template_name_or_list='warning.html',
+            status='POST HTTP method required.'
+        )
 
 
 def generate():
@@ -235,16 +270,21 @@ def predict_page():
     """Renders the 'predict.html' page for manual image file uploads for prediction."""
     return render_template(template_name_or_list="predict.html")
 
+@app.route('/video_feed_add')
+def video_feed_add():
+    return Response(generate(),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
+
 @app.route('/add')
 def add_person():
+    
+    t = threading.Thread(target=detect_face_live)
+    t.daemon = True
+    t.start()
     return render_template(template_name_or_list="upload.html")
 
 
 if __name__ == '__main__':
-
-    # t = threading.Thread(target=detect_face_live)
-    # t.daemon = True
-    # t.start()
 
     app.run()
 
