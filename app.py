@@ -1,11 +1,11 @@
 from utils import *
 from imutils.video import WebcamVideoStream
 from flask import Response, Flask, render_template, request
-import threading
 import argparse
 import datetime
 import imutils
 import time
+import threading
 import cv2
 from PIL import Image
 from waitress import serve
@@ -20,6 +20,8 @@ APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 uploads_path = os.path.join(APP_ROOT, 'uploads')
 allowed_set = set(['png', 'jpg', 'jpeg'])
 
+vs = WebcamVideoStream(src=0).start()
+time.sleep(2.0)
 
 faceObj = FaceObject()
 
@@ -27,19 +29,6 @@ faceObj = FaceObject()
 def index_page():
     return render_template(template_name_or_list='index.html')
 
-@app.route('/video_feed')
-def video_feed():
-    return Response(generate(),
-            mimetype='multipart/x-mixed-replace; boundary=frame')
-
-@app.route('/live_feed')
-def live_feed():
-    return render_template('live.html')
-
-
-@app.route('/predict')
-def predict_page():
-    return render_template(template_name_or_list='predict.html')
 
 @app.route('/upload',methods=['POST','GET'])
 def get_image():
@@ -143,47 +132,80 @@ def predict_image():
 
 
 def detect_face_live():
-    global vs, outputFrame, lock
 
-
-    vs = WebcamVideoStream(src=0).start()
-    time.sleep(2.0)
+    global outputFrame,vs, lock
 
     while True:
 
         frame = vs.read()
-        frame = imutils.resize(frame,width=800)
+        frame = imutils.resize(frame)
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
+        
         faces = faceObj.detect_face(gray)
-
+        
         timestamp = datetime.datetime.now()
         cv2.putText(frame, timestamp.strftime(
 			"%A %d %B %Y %I:%M:%S%p"), (10, frame.shape[0] - 10),
-			cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 0, 255), 1)
+			cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1)
 
         if faces is not None:
             for (x,y,w,h) in faces:
-                cv2.rectangle(frame,(x,y),(x+w,y+h),(255,0,0),2)
 
                 image = gray[y:y+h, x:x+w]
 
                 prediction = faceObj.recognize(image)
 
                 if prediction is not None:
+                    cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),2)
                     cv2.putText(frame,'%s' % (prediction),(x-10, y-10), cv2.FONT_HERSHEY_PLAIN,1,(0, 255, 0))
                 else:
-                    cv2.putText(frame,'not recognized',(x-10, y-10), cv2.FONT_HERSHEY_PLAIN,1,(0, 255, 0))
+                    cv2.rectangle(frame,(x,y),(x+w,y+h),(0,0,255),2)
+                    cv2.putText(frame,'not recognized',(x-10, y-10), cv2.FONT_HERSHEY_PLAIN,1,(0, 0, 255))
 
-        with lock:
-            outputFrame = frame.copy()
+        outputFrame = frame.copy()
+
+
+def detect_and_add():
+    
+    global outputFrame,vs, lock
+
+    count = 0
+
+    while count<100:
+
+        frame = vs.read()
+        frame = imutils.resize(frame)
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        
+        faces = faceObj.detect_face(gray)
+        
+        timestamp = datetime.datetime.now()
+        cv2.putText(frame, timestamp.strftime(
+			"%A %d %B %Y %I:%M:%S%p"), (10, frame.shape[0] - 10),
+			cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1)
+
+        if faces is not None:
+            for (x,y,w,h) in faces:
+
+                image = gray[y:y+h, x:x+w]
+                
+
+
+
+        outputFrame = frame.copy()
+
+
+
+@app.route('/add_image')
+def add_image():
+    pass
 
 
 def generate():
-
-    global outputFrame, lock
+    global outputFrame,lock
 
     while True:
+
         with lock:
             if outputFrame is None:
                 continue
@@ -196,12 +218,33 @@ def generate():
         yield(b'--frame\r\n'b'Content-Type: image/jpeg\r\n\r\n'+
                 bytearray(encodedImage) + b'\r\n')
 
+@app.route('/video_feed')
+def video_feed():
+    return Response(generate(),
+            mimetype='multipart/x-mixed-replace; boundary=frame')
 
-if __name__ == '__main__':
-
+@app.route('/live_feed')
+def face_detect_live():
     t = threading.Thread(target=detect_face_live)
     t.daemon = True
     t.start()
+    return render_template('live.html')
+
+@app.route("/predict")
+def predict_page():
+    """Renders the 'predict.html' page for manual image file uploads for prediction."""
+    return render_template(template_name_or_list="predict.html")
+
+@app.route('/add')
+def add_person():
+    return render_template(template_name_or_list="upload.html")
+
+
+if __name__ == '__main__':
+
+    # t = threading.Thread(target=detect_face_live)
+    # t.daemon = True
+    # t.start()
 
     app.run()
 

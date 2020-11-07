@@ -5,7 +5,7 @@ import os
 from flask import flash
 
 class FaceObject:
-
+    
     def __init__(self):
         self.haar_file = 'haarcascade_frontalface_default.xml'
         self.face_detector = cv2.CascadeClassifier(self.haar_file)
@@ -42,7 +42,7 @@ class FaceObject:
     def recognize(self,image):
         
         prediction,confidence = self.face_recognizer.predict(image)
-        
+
         if confidence < 100:
                 return prediction
         
