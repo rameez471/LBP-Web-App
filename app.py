@@ -7,6 +7,7 @@ import datetime
 import imutils
 import time
 import cv2
+from PIL import Image
 from waitress import serve
 from werkzeug.utils import secure_filename
 
@@ -129,9 +130,10 @@ def get_image():
                 status='No file selected!'
             )
         
-        if file and allowed_file(filename=filename, allowed_file=allowed_set):
+        if file and allowed_file(filename=filename, allowed_set=allowed_set):
             filename = secure_filename(filename=filename)
-            img = cv2.imread(name=file, mode='RGB')
+            img = np.asarray(Image.open(file))
+
             faces = faceObj.detect_face(img)
 
             if faces is not None:
@@ -150,7 +152,7 @@ def get_image():
             else:
                 return render_template(
                     template_name_or_list='upload_result.html',
-                    status='Image upload was unseccesfull! No Image detected.'
+                    status='Image upload was unseccesfull! No face detected.'
                 )
 
     else:
@@ -179,7 +181,7 @@ def predict_image():
             )
 
         if file and allowed_file(filename=filename, allowed_set=allowed_set):
-            img = cv2.imread(name=file, mode='RGB')
+            img = img = np.asarray(Image.open(file))
             faces = faceObj.detect_face(img)
 
             if faces is not None:
@@ -229,9 +231,9 @@ def face_detect_live():
                 for (x,y,w,h) in faces:
                     cv2.rectangle(frame,(x,y),(x+w,y+h),(255,0,0),2)
 
-                    image = gray[y:y+h, x:x+w]
+                    face = frame[y:y+h, x:x+w]
 
-                    prediction = face.recognize(image)
+                    prediction = faceObj.recognize(face)
 
                     if prediction is not None:
                         cv2.putText(frame,'%s - %.0f' % (prediction),(x-10, y-10), cv2.FONT_HERSHEY_PLAIN,1,(0, 255, 0))
