@@ -42,8 +42,8 @@ class FaceObject:
     def recognize(self,image):
         
         prediction,confidence = self.face_recognizer.predict(image)
-        print(confidence)
-        if confidence < 50:
+        
+        if confidence < 100:
                 return prediction
         
         return None
