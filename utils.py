@@ -10,6 +10,7 @@ class FaceObject:
         self.haar_file = 'haarcascade_frontalface_default.xml'
         self.face_detector = cv2.CascadeClassifier(self.haar_file)
         self.face_recognizer = cv2.face.LBPHFaceRecognizer_create()
+        self.names = {}
         self.train()
 
     def detect_face(self,image):
@@ -22,11 +23,11 @@ class FaceObject:
 
     def train(self):
 
-        (images, labels, names, id) = ([], [], {}, 0)
+        (images, labels,  id) = ([], [], 0)
         datasets = 'datasets'
         for (subdirs, dirs, files) in os.walk(datasets):
             for subdir in dirs:
-                names[id] = subdir
+                self.names[id] = subdir
                 subjectpath = os.path.join(datasets, subdir)
                 for filename in os.listdir(subjectpath):
                     path = subjectpath + '/' + filename
@@ -44,7 +45,7 @@ class FaceObject:
         prediction,confidence = self.face_recognizer.predict(image)
 
         if confidence < 100:
-                return prediction
+                return self.names[prediction]
         
         return None
 

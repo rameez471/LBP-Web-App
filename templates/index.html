@@ -14,18 +14,13 @@
             <br><br>
         <h1>Server Online</h1>
             <br><br><br>
-        <!-- <h3>Upload your image file for storage and embedding:</h3>
-            <br><br>
-        <form method=POST enctype=multipart/form-data action="{{ url_for('get_image') }}">
-            <input type=file name=file class="btn btn-outline-dark">
-            <input type="submit" class="btn btn-outline-dark">
-        </form>
-             <br><br><br><br><br>
-        <a href="{{ url_for('predict_page') }}" class="btn btn-outline-dark">Click here for image identity prediction!</a> -->
             <br><br><br>
-        <a href="{{ url_for('face_detect_live') }}" class="btn btn-outline-light">Click here for live facial recognition with Web Camera!</a>
-        <br>
-        <a href="{{ url_for('add_person') }}" class="btn btn-outline-light">Click here to add a person with Web Camera!</a>
+        <div class="my-5">
+            <a href="{{ url_for('face_detect_live') }}" class="btn btn-outline-light">Click here for live facial recognition with Web Camera!</a>
+        </div>
+        <div class="my-5">
+            <a href="{{ url_for('add_person') }}" class="btn btn-outline-light">Click here to add a person with Web Camera!</a>
+        </div>
     </div>
 </body>
 </html>

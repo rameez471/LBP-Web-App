@@ -31,107 +31,6 @@ def index_page():
     return render_template(template_name_or_list='index.html')
 
 
-@app.route('/upload',methods=['POST','GET'])
-def get_image():
-
-    if request.method == 'POST':
-        if 'file' not in request.files:
-            return render_template(
-                template_name_or_list='warning.html',
-                status='No file field in POST request'
-            )
-
-        file = request.files['file']
-        filename = file.filename
-
-        if filename == '':
-            return render_template(
-                template_name_or_list='warning.html',
-                status='No file selected!'
-            )
-        
-        if file and allowed_file(filename=filename, allowed_set=allowed_set):
-            filename = secure_filename(filename=filename)
-            img = np.asarray(Image.open(file))
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            faces = faceObj.detect_face(img)
-
-            if faces is not None:
-                for (x,y,w,h) in faces:
-                    face = img[y:y+h, x:x+w]
-                    save_image(img=face,filename=filename,uploads_path=uploads_path)
-
-                    filename = remove_file_extension(filename=filename)
-
-                faceObj.train()
-                return render_template(
-                    template_name_or_list='upload_result.html',
-                    status='Image uploaded successfully'
-                )
-
-            else:
-                return render_template(
-                    template_name_or_list='upload_result.html',
-                    status='Image upload was unseccesfull! No face detected.'
-                )
-
-    else:
-        return render_template(
-            template_name_or_list='warning.html',
-            status='POST http method required.'
-        )
-
-@app.route('/predictImage',methods=['GET', 'POST'])
-def predict_image():
-
-    if request.method == 'POST':
-        if 'file' not in request.files:
-            return render_template(
-                template_name_or_list='warning.html',
-                status='No file in POST request'
-            )
-
-        file = request.files['file']
-        filename = file.filename
-
-        if filename == '':
-            return render_template(
-                template_name_or_list='warning.html',
-                status='No selected file!'
-            )
-
-        if file and allowed_file(filename=filename, allowed_set=allowed_set):
-            img = img = np.asarray(Image.open(file))
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            faces = faceObj.detect_face(img)
-
-            if faces is not None:
-                (x,y,w,h) = faces[0]
-                face = img[y:y+h, x:x+w]
-                prediction = faceObj.recognize(face)
-                if prediction is not None:
-                    return render_template(
-                        template_name_or_list='predict_result.html',
-                        identity=prediction
-                    )
-                else:
-                    return render_template(
-                        template_name_or_list='predict_result.html',
-                        identity='No identity found!'
-                    )
-            else:
-                return render_template(
-                    template_name_or_list='predict_result.html',
-                    identity='Operation unseccesfull! No human face detected!'
-                )
-
-    else:
-        return render_template(
-            template_name_or_list='warning.html',
-            status='POST HTTP method required.'
-        )
-
-
 def detect_face_live():
 
     global outputFrame,vs, lock
@@ -188,7 +87,7 @@ def detect_and_add():
 
         if faces is not None:
             for (x,y,w,h) in faces:
-
+                cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),2)
                 image = gray[y:y+h, x:x+w]
                 image_array.append((image,count))
 
@@ -278,7 +177,7 @@ def video_feed_add():
 @app.route('/add')
 def add_person():
     
-    t = threading.Thread(target=detect_face_live)
+    t = threading.Thread(target=detect_and_add)
     t.daemon = True
     t.start()
     return render_template(template_name_or_list="upload.html")
