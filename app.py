@@ -1,14 +1,12 @@
 from utils import *
 from imutils.video import WebcamVideoStream
 from flask import Response, Flask, render_template, request
-import argparse
 import datetime
 import imutils
 import time
 import threading
 import cv2
 from PIL import Image
-from waitress import serve
 from werkzeug.utils import secure_filename
 
 outputFrame = None
@@ -185,6 +183,7 @@ def add_person():
 
 if __name__ == '__main__':
 
+    app.debug = False
     app.run()
 
 # release the video stream pointer
